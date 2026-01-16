@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs:*)",
+      "Bash(./gradlew.bat build:*)",
+      "Bash(./gradlew.bat:*)",
+      "Bash(.gradlew.bat runClient)",
+      "Bash(cmd.exe /c \"gradlew.bat runClient\")",
+      "Bash(cmd.exe /c \".\\\\gradlew.bat runClient\")",
+      "Bash(tasklist:*)",
+      "Bash(.gradlew.bat build:*)",
+      "Bash(cmd /c \"gradlew.bat build --no-daemon 2>&1\")",
+      "Bash(powershell.exe:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(timeout 90 bash:*)",
+      "Bash(taskkill /F /PID 5320)",
+      "Bash(taskkill:*)",
+      "Bash(timeout:*)",
+      "Bash(dir \"C:\\\\Users\\\\Nikit\\\\Desktop\\\\realisticfireworkmod-template-1.21.1\")"
+    ]
+  }
+}

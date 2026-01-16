@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "com.nick.realisticfirework.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "mixins": [],
+  "client": [
+    "client.LevelRendererMixin",
+    "client.EntityRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

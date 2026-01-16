@@ -1,0 +1,12 @@
+{
+  "sources": [
+    {
+      "type": "minecraft:single",
+      "resource": "realisticfireworkmod:particle/sparkler_spark"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "realisticfireworkmod:particle/sparkler_stick"
+    }
+  ]
+}

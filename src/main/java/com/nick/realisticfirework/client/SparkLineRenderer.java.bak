@@ -1,0 +1,302 @@
+package com.nick.realisticfirework.client;
+
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import org.joml.Matrix4f;
+
+/**
+ * Utility class for rendering spark line effects.
+ * Contains methods for rendering wire-thin sparks and complex branching spark trails.
+ */
+public class SparkLineRenderer {
+
+    /**
+     * Render a simple wire-thin spark line - the key to realistic sparkler look
+     * No fancy effects - just a clean bright tapered line that fades at the tail
+     * This creates the iconic radiating wire pattern when rendered in large numbers
+     */
+    public static void renderWireSpark(VertexConsumer consumer, Matrix4f pose,
+                                  float x1, float y1, float z1,  // head (bright end)
+                                  float x2, float y2, float z2,  // tail (fading end)
+                                  float width, long seed,
+                                  float u0, float u1, float v0, float v1,
+                                  int light, int r, int g, int b, int a) {
+
+        // Direction and length
+        float dx = x2 - x1;
+        float dy = y2 - y1;
+        float dz = z2 - z1;
+        float length = (float) Math.sqrt(dx*dx + dy*dy + dz*dz);
+        if (length < 0.0005f) return;
+
+        // Normalize direction
+        float dirX = dx / length;
+        float dirY = dy / length;
+        float dirZ = dz / length;
+
+        // Get perpendicular vector for quad width
+        float perpX, perpY, perpZ;
+        if (Math.abs(dirY) < 0.9f) {
+            // Cross with Y axis
+            perpX = -dirZ;
+            perpY = 0;
+            perpZ = dirX;
+        } else {
+            // Cross with X axis
+            perpX = 0;
+            perpY = dirZ;
+            perpZ = -dirY;
+        }
+        float perpLen = (float) Math.sqrt(perpX*perpX + perpY*perpY + perpZ*perpZ);
+        if (perpLen > 0.001f) {
+            perpX /= perpLen;
+            perpY /= perpLen;
+            perpZ /= perpLen;
+        }
+
+        // Second perpendicular for crossed planes (better visibility from all angles)
+        float perp2X = dirY * perpZ - dirZ * perpY;
+        float perp2Y = dirZ * perpX - dirX * perpZ;
+        float perp2Z = dirX * perpY - dirY * perpX;
+
+        // Tail width (tapers to point)
+        float tailWidth = width * 0.15f;
+
+        // Head is full brightness, tail fades out
+        int tailAlpha = (int)(a * 0.1f);  // Almost transparent at tail
+
+        // ===== RENDER TWO CROSSED PLANES for visibility from all angles =====
+
+        // Plane 1 - using perp vector
+        consumer.addVertex(pose, x1 + perpX * width, y1 + perpY * width, z1 + perpZ * width)
+                .setColor(r, g, b, a).setUv(u0, v0).setOverlay(0).setLight(light).setNormal(perpX, perpY, perpZ);
+        consumer.addVertex(pose, x1 - perpX * width, y1 - perpY * width, z1 - perpZ * width)
+                .setColor(r, g, b, a).setUv(u1, v0).setOverlay(0).setLight(light).setNormal(-perpX, -perpY, -perpZ);
+        consumer.addVertex(pose, x2 - perpX * tailWidth, y2 - perpY * tailWidth, z2 - perpZ * tailWidth)
+                .setColor(r, g, b, tailAlpha).setUv(u1, v1).setOverlay(0).setLight(light).setNormal(-perpX, -perpY, -perpZ);
+        consumer.addVertex(pose, x2 + perpX * tailWidth, y2 + perpY * tailWidth, z2 + perpZ * tailWidth)
+                .setColor(r, g, b, tailAlpha).setUv(u0, v1).setOverlay(0).setLight(light).setNormal(perpX, perpY, perpZ);
+
+        // Plane 2 - using perp2 vector (crossed)
+        consumer.addVertex(pose, x1 + perp2X * width, y1 + perp2Y * width, z1 + perp2Z * width)
+                .setColor(r, g, b, a).setUv(u0, v0).setOverlay(0).setLight(light).setNormal(perp2X, perp2Y, perp2Z);
+        consumer.addVertex(pose, x1 - perp2X * width, y1 - perp2Y * width, z1 - perp2Z * width)
+                .setColor(r, g, b, a).setUv(u1, v0).setOverlay(0).setLight(light).setNormal(-perp2X, -perp2Y, -perp2Z);
+        consumer.addVertex(pose, x2 - perp2X * tailWidth, y2 - perp2Y * tailWidth, z2 - perp2Z * tailWidth)
+                .setColor(r, g, b, tailAlpha).setUv(u1, v1).setOverlay(0).setLight(light).setNormal(-perp2X, -perp2Y, -perp2Z);
+        consumer.addVertex(pose, x2 + perp2X * tailWidth, y2 + perp2Y * tailWidth, z2 + perp2Z * tailWidth)
+                .setColor(r, g, b, tailAlpha).setUv(u0, v1).setOverlay(0).setLight(light).setNormal(perp2X, perp2Y, perp2Z);
+    }
+
+    /**
+     * Render a string-like spark with random branches
+     * Creates organic branching trails like real spark trails
+     * KEEPS ALL VISUAL PROPERTIES (brightness, color, alpha) identical
+     */
+    public static void renderComplexSpark(VertexConsumer consumer, Matrix4f pose,
+                                     float x1, float y1, float z1,  // head (bright end)
+                                     float x2, float y2, float z2,  // tail (fading end)
+                                     float width, long seed,
+                                     float u0, float u1, float v0, float v1,
+                                     int light, int r, int g, int b, int a) {
+
+        // Use seed for consistent randomness per spark
+        java.util.Random sparkRandom = new java.util.Random(seed);
+
+        // Direction and length
+        float dx = x2 - x1;
+        float dy = y2 - y1;
+        float dz = z2 - z1;
+        float length = (float) Math.sqrt(dx*dx + dy*dy + dz*dz);
+        if (length < 0.001f) return;
+
+        // Normalize direction
+        float dirX = dx / length;
+        float dirY = dy / length;
+        float dirZ = dz / length;
+
+        // Get two perpendicular vectors for 3D offsets
+        float upX = 0, upY = 1, upZ = 0;
+        float perpX = upY * dirZ - upZ * dirY;
+        float perpY = upZ * dirX - upX * dirZ;
+        float perpZ = upX * dirY - upY * dirX;
+        float perpLen = (float) Math.sqrt(perpX*perpX + perpY*perpY + perpZ*perpZ);
+        if (perpLen < 0.001f) {
+            upX = 1; upY = 0; upZ = 0;
+            perpX = upY * dirZ - upZ * dirY;
+            perpY = upZ * dirX - upX * dirZ;
+            perpZ = upX * dirY - upY * dirX;
+            perpLen = (float) Math.sqrt(perpX*perpX + perpY*perpY + perpZ*perpZ);
+        }
+        if (perpLen > 0.001f) {
+            perpX /= perpLen; perpY /= perpLen; perpZ /= perpLen;
+        }
+        float perp2X = dirY * perpZ - dirZ * perpY;
+        float perp2Y = dirZ * perpX - dirX * perpZ;
+        float perp2Z = dirX * perpY - dirY * perpX;
+
+        // ===== MAIN STRING TRAIL =====
+        // Number of segments for main jagged string (4-8 for organic look)
+        int mainSegments = 4 + sparkRandom.nextInt(5);
+
+        // Store points for main trail (for branch spawning)
+        float[] trailX = new float[mainSegments + 1];
+        float[] trailY = new float[mainSegments + 1];
+        float[] trailZ = new float[mainSegments + 1];
+        float[] trailT = new float[mainSegments + 1];  // t value for color calc
+
+        trailX[0] = x1; trailY[0] = y1; trailZ[0] = z1; trailT[0] = 0;
+
+        // Generate jagged main trail points
+        for (int i = 1; i <= mainSegments; i++) {
+            float t = (float) i / mainSegments;
+
+            // Base position along the line
+            float baseX = x1 + dx * t;
+            float baseY = y1 + dy * t;
+            float baseZ = z1 + dz * t;
+
+            // Random perpendicular offset (more near head, less at tail)
+            float jagAmount = length * 0.15f * (1.0f - t * 0.7f);
+            float offX = (sparkRandom.nextFloat() - 0.5f) * jagAmount * perpX
+                       + (sparkRandom.nextFloat() - 0.5f) * jagAmount * perp2X;
+            float offY = (sparkRandom.nextFloat() - 0.5f) * jagAmount * perpY
+                       + (sparkRandom.nextFloat() - 0.5f) * jagAmount * perp2Y;
+            float offZ = (sparkRandom.nextFloat() - 0.5f) * jagAmount * perpZ
+                       + (sparkRandom.nextFloat() - 0.5f) * jagAmount * perp2Z;
+
+            trailX[i] = baseX + offX;
+            trailY[i] = baseY + offY;
+            trailZ[i] = baseZ + offZ;
+            trailT[i] = t;
+        }
+
+        // Render main trail as connected string segments
+        for (int i = 0; i < mainSegments; i++) {
+            float t1 = trailT[i];
+            float t2 = trailT[i + 1];
+
+            // Color fades along trail (preserving original brightness/color properties)
+            float fade1 = 1.0f - t1 * 0.5f;
+            float fade2 = 1.0f - t2 * 0.5f;
+            int r1 = (int)(r * fade1), g1 = (int)(g * fade1), b1 = (int)(b * fade1), a1 = (int)(a * fade1);
+            int r2 = (int)(r * fade2), g2 = (int)(g * fade2), b2 = (int)(b * fade2), a2 = (int)(a * fade2);
+
+            // Width tapers (very thin - string-like)
+            float w1 = width * (1.0f - t1 * 0.6f);
+            float w2 = width * (1.0f - t2 * 0.6f);
+
+            // Render thin string segment (2 crossed planes for visibility from all angles)
+            renderThinStringSegment(consumer, pose,
+                trailX[i], trailY[i], trailZ[i], w1,
+                trailX[i+1], trailY[i+1], trailZ[i+1], w2,
+                perpX, perpY, perpZ, perp2X, perp2Y, perp2Z,
+                u0, u1, v0, v1, light,
+                r1, g1, b1, a1, r2, g2, b2, a2);
+        }
+
+        // ===== RANDOM BRANCHES =====
+        // 1-3 branches sprouting from random points along the trail
+        int numBranches = 1 + sparkRandom.nextInt(3);
+
+        for (int branch = 0; branch < numBranches; branch++) {
+            // Pick a random point along main trail (prefer middle section)
+            int branchPoint = 1 + sparkRandom.nextInt(Math.max(1, mainSegments - 1));
+            float branchT = trailT[branchPoint];
+
+            float bx = trailX[branchPoint];
+            float by = trailY[branchPoint];
+            float bz = trailZ[branchPoint];
+
+            // Branch direction - random deviation from main direction
+            float branchAngle = (sparkRandom.nextFloat() - 0.5f) * 2.5f;  // radians
+            float branchTilt = (sparkRandom.nextFloat() - 0.5f) * 2.0f;
+
+            // Rotate direction around perpendicular axes
+            float cos1 = (float)Math.cos(branchAngle);
+            float sin1 = (float)Math.sin(branchAngle);
+            float cos2 = (float)Math.cos(branchTilt);
+            float sin2 = (float)Math.sin(branchTilt);
+
+            // New branch direction (deviated from main)
+            float bdirX = dirX * cos1 + perpX * sin1;
+            float bdirY = dirY * cos2 + perp2Y * sin2;
+            float bdirZ = dirZ * cos1 + perpZ * sin1;
+            float bdirLen = (float)Math.sqrt(bdirX*bdirX + bdirY*bdirY + bdirZ*bdirZ);
+            if (bdirLen > 0.001f) { bdirX /= bdirLen; bdirY /= bdirLen; bdirZ /= bdirLen; }
+
+            // Branch length (shorter than main trail, 20-50% of remaining length)
+            float branchLength = length * (0.2f + sparkRandom.nextFloat() * 0.3f) * (1.0f - branchT);
+
+            // Branch has 2-4 segments
+            int branchSegs = 2 + sparkRandom.nextInt(3);
+            float prevBx = bx, prevBy = by, prevBz = bz;
+
+            for (int bs = 1; bs <= branchSegs; bs++) {
+                float bt = (float) bs / branchSegs;
+                float totalT = branchT + bt * (1.0f - branchT) * 0.5f;  // For color fade
+
+                // Next point along branch with small random offset
+                float segLen = branchLength / branchSegs;
+                float bjag = segLen * 0.3f;
+
+                float nextBx = prevBx + bdirX * segLen + (sparkRandom.nextFloat() - 0.5f) * bjag;
+                float nextBy = prevBy + bdirY * segLen + (sparkRandom.nextFloat() - 0.5f) * bjag;
+                float nextBz = prevBz + bdirZ * segLen + (sparkRandom.nextFloat() - 0.5f) * bjag;
+
+                // Color fades more on branches (same properties, just faded)
+                float bfade1 = (1.0f - (branchT + (bt - 1.0f/branchSegs) * 0.5f)) * 0.8f;
+                float bfade2 = (1.0f - totalT) * 0.8f;
+                int br1 = (int)(r * bfade1), bg1 = (int)(g * bfade1), bb1 = (int)(b * bfade1), ba1 = (int)(a * bfade1);
+                int br2 = (int)(r * bfade2), bg2 = (int)(g * bfade2), bb2 = (int)(b * bfade2), ba2 = (int)(a * bfade2);
+
+                // Branch width (thinner than main)
+                float bw1 = width * 0.7f * (1.0f - bt * 0.5f);
+                float bw2 = width * 0.7f * (1.0f - (bt + 1.0f/branchSegs) * 0.5f);
+
+                renderThinStringSegment(consumer, pose,
+                    prevBx, prevBy, prevBz, bw1,
+                    nextBx, nextBy, nextBz, bw2,
+                    perpX, perpY, perpZ, perp2X, perp2Y, perp2Z,
+                    u0, u1, v0, v1, light,
+                    br1, bg1, bb1, ba1, br2, bg2, bb2, ba2);
+
+                prevBx = nextBx; prevBy = nextBy; prevBz = nextBz;
+            }
+        }
+    }
+
+    /**
+     * Render a thin string-like segment between two points
+     * Creates 2 crossed thin quads for visibility from all angles (like crossed billboard)
+     * Keeps all visual properties (color, brightness, alpha) intact
+     */
+    public static void renderThinStringSegment(VertexConsumer consumer, Matrix4f pose,
+                                          float x1, float y1, float z1, float w1,
+                                          float x2, float y2, float z2, float w2,
+                                          float perpX, float perpY, float perpZ,
+                                          float perp2X, float perp2Y, float perp2Z,
+                                          float u0, float u1, float v0, float v1, int light,
+                                          int r1, int g1, int b1, int a1,
+                                          int r2, int g2, int b2, int a2) {
+
+        // First plane (perpendicular to perp vector)
+        consumer.addVertex(pose, x1 - perpX * w1, y1 - perpY * w1, z1 - perpZ * w1)
+              .setColor(r1, g1, b1, a1).setUv(u0, v0).setOverlay(0).setLight(light).setNormal(perp2X, perp2Y, perp2Z);
+        consumer.addVertex(pose, x1 + perpX * w1, y1 + perpY * w1, z1 + perpZ * w1)
+              .setColor(r1, g1, b1, a1).setUv(u1, v0).setOverlay(0).setLight(light).setNormal(perp2X, perp2Y, perp2Z);
+        consumer.addVertex(pose, x2 + perpX * w2, y2 + perpY * w2, z2 + perpZ * w2)
+              .setColor(r2, g2, b2, a2).setUv(u1, v1).setOverlay(0).setLight(light).setNormal(perp2X, perp2Y, perp2Z);
+        consumer.addVertex(pose, x2 - perpX * w2, y2 - perpY * w2, z2 - perpZ * w2)
+              .setColor(r2, g2, b2, a2).setUv(u0, v1).setOverlay(0).setLight(light).setNormal(perp2X, perp2Y, perp2Z);
+
+        // Second plane (perpendicular to perp2 vector) - crossed for visibility
+        consumer.addVertex(pose, x1 - perp2X * w1, y1 - perp2Y * w1, z1 - perp2Z * w1)
+              .setColor(r1, g1, b1, a1).setUv(u0, v0).setOverlay(0).setLight(light).setNormal(perpX, perpY, perpZ);
+        consumer.addVertex(pose, x1 + perp2X * w1, y1 + perp2Y * w1, z1 + perp2Z * w1)
+              .setColor(r1, g1, b1, a1).setUv(u1, v0).setOverlay(0).setLight(light).setNormal(perpX, perpY, perpZ);
+        consumer.addVertex(pose, x2 + perp2X * w2, y2 + perp2Y * w2, z2 + perp2Z * w2)
+              .setColor(r2, g2, b2, a2).setUv(u1, v1).setOverlay(0).setLight(light).setNormal(perpX, perpY, perpZ);
+        consumer.addVertex(pose, x2 - perp2X * w2, y2 - perp2Y * w2, z2 - perp2Z * w2)
+              .setColor(r2, g2, b2, a2).setUv(u0, v1).setOverlay(0).setLight(light).setNormal(perpX, perpY, perpZ);
+    }
+}

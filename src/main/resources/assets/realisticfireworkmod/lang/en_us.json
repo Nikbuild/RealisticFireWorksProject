@@ -1,0 +1,12 @@
+{
+  "itemGroup.realisticfireworkmod": "Realistic Fireworks",
+  "item.realisticfireworkmod.sparkler": "Sparkler",
+
+  "realisticfireworkmod.configuration.title": "RealisticFireworkMod Configs",
+  "realisticfireworkmod.configuration.section.realisticfireworkmod.common.toml": "RealisticFireworkMod Configs",
+  "realisticfireworkmod.configuration.section.realisticfireworkmod.common.toml.title": "RealisticFireworkMod Configs",
+  "realisticfireworkmod.configuration.items": "Item List",
+  "realisticfireworkmod.configuration.logDirtBlock": "Log Dirt Block",
+  "realisticfireworkmod.configuration.magicNumberIntroduction": "Magic Number Text",
+  "realisticfireworkmod.configuration.magicNumber": "Magic Number"
+}
