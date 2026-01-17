@@ -2,6 +2,9 @@
   "itemGroup.realisticfireworkmod": "Realistic Fireworks",
   "item.realisticfireworkmod.sparkler": "Sparkler",
 
+  "subtitles.realisticfireworkmod.sparkler_burning": "Sparkler sizzling",
+  "subtitles.realisticfireworkmod.sparkler_ignite": "Sparkler ignites",
+
   "realisticfireworkmod.configuration.title": "RealisticFireworkMod Configs",
   "realisticfireworkmod.configuration.section.realisticfireworkmod.common.toml": "RealisticFireworkMod Configs",
   "realisticfireworkmod.configuration.section.realisticfireworkmod.common.toml.title": "RealisticFireworkMod Configs",

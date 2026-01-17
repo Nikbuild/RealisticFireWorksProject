@@ -411,36 +411,32 @@ public class GlowRenderer {
         int segments = 32;
 
         // ========== LAYER DEFINITIONS ==========
-        // Reference image analysis: white-hot core -> yellow -> soft amber -> diffuse haze
-        // Much larger radius than before - the glow should dominate the view
+        // Reference image: COMPACT intense white-hot core with rapid falloff
+        // The glow should be concentrated, not spread out
 
         // Layer structure: {radiusMultiplier, R, G, B, alpha}
-        // Colors: pure white core, transitioning through yellow to soft amber
+        // Colors: brilliant white core -> warm yellow -> soft amber falloff
         float[][] layers = {
-            // Layer 0: Intense white-hot core (very small, very bright)
-            {0.15f,  1.0f, 1.0f, 1.0f, 0.98f},
-            // Layer 1: Warm white
-            {0.3f,   1.0f, 0.99f, 0.95f, 0.85f},
-            // Layer 2: Cream/pale yellow
-            {0.5f,   1.0f, 0.97f, 0.85f, 0.65f},
-            // Layer 3: Yellow
-            {0.8f,   1.0f, 0.93f, 0.70f, 0.45f},
-            // Layer 4: Yellow-gold
-            {1.2f,   1.0f, 0.88f, 0.55f, 0.30f},
-            // Layer 5: Gold-amber
-            {1.8f,   1.0f, 0.80f, 0.45f, 0.18f},
-            // Layer 6: Soft amber
-            {2.5f,   1.0f, 0.72f, 0.38f, 0.10f},
-            // Layer 7: Diffuse amber haze
-            {3.5f,   1.0f, 0.65f, 0.32f, 0.05f},
-            // Layer 8: Outer atmospheric haze (very faint)
-            {5.0f,   1.0f, 0.60f, 0.30f, 0.02f},
-            // Layer 9: Extreme outer haze
-            {7.0f,   1.0f, 0.55f, 0.28f, 0.008f},
+            // Layer 0: INTENSE white-hot core (tiny, maximum brightness)
+            {0.1f,   1.0f, 1.0f, 1.0f, 0.99f},
+            // Layer 1: Bright white
+            {0.2f,   1.0f, 1.0f, 0.98f, 0.90f},
+            // Layer 2: Warm white
+            {0.35f,  1.0f, 0.98f, 0.92f, 0.70f},
+            // Layer 3: Cream yellow
+            {0.55f,  1.0f, 0.95f, 0.80f, 0.50f},
+            // Layer 4: Warm yellow
+            {0.8f,   1.0f, 0.90f, 0.65f, 0.32f},
+            // Layer 5: Golden
+            {1.1f,   1.0f, 0.85f, 0.50f, 0.18f},
+            // Layer 6: Soft amber (faint)
+            {1.5f,   1.0f, 0.78f, 0.40f, 0.08f},
+            // Layer 7: Outer haze (very faint)
+            {2.0f,   1.0f, 0.70f, 0.35f, 0.03f},
         };
 
-        // Base radius - MUCH larger than before (was 0.015f, now 0.06f base)
-        float baseRadius = 0.06f;
+        // Base radius - SMALLER for concentrated glow (was 0.06f, now 0.035f)
+        float baseRadius = 0.035f;
 
         // Apply intensity to alphas
         for (int l = 0; l < layers.length; l++) {
@@ -484,13 +480,13 @@ public class GlowRenderer {
 
         // ========== EXTRA BRIGHT CORE PASS ==========
         // Stack additional very small, very bright layers at center for "overexposed" effect
-        float coreRadius = baseRadius * 0.1f;
-        float coreAlpha = intensity * 0.95f;
+        float coreRadius = baseRadius * 0.08f;
+        float coreAlpha = intensity * 0.98f;
 
-        // Multiple stacked core layers for intensity
-        for (int pass = 0; pass < 3; pass++) {
-            float passRadius = coreRadius * (1.0f + pass * 0.3f);
-            float passAlpha = coreAlpha * (1.0f - pass * 0.2f);
+        // Multiple stacked core layers for intense white-hot center
+        for (int pass = 0; pass < 4; pass++) {
+            float passRadius = coreRadius * (1.0f + pass * 0.25f);
+            float passAlpha = coreAlpha * (1.0f - pass * 0.15f);
 
             for (int i = 0; i < segments; i++) {
                 float angle1 = (float)(i * 2 * Math.PI / segments);

@@ -25,8 +25,11 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import com.nick.realisticfirework.client.DynamicLightManager;
+import com.nick.realisticfirework.client.SparklerSoundManager;
 import com.nick.realisticfirework.registry.ModDataComponents;
 import com.nick.realisticfirework.registry.ModParticles;
+import com.nick.realisticfirework.registry.ModSounds;
+import com.nick.realisticfirework.data.SparklerData;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(RealisticFireworkMod.MODID)
@@ -59,6 +62,8 @@ public class RealisticFireworkMod {
         ModDataComponents.DATA_COMPONENTS.register(modEventBus);
         // Register particles
         ModParticles.PARTICLE_TYPES.register(modEventBus);
+        // Register sounds
+        ModSounds.SOUND_EVENTS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so tabs get registered
         CREATIVE_MODE_TABS.register(modEventBus);
         // All sparkler effects are now rendered in SparklerSpecialRenderer (model-space)
@@ -143,11 +148,13 @@ public class RealisticFireworkMod {
 
     @SubscribeEvent
     public void onLevelTick(LevelTickEvent.Post event) {
-        // Handle dynamic lighting for dropped sparklers
+        // Handle dynamic lighting for dropped sparklers (server-side)
+        // and sound management (client-side)
         var level = event.getLevel();
+        long currentTick = level.getGameTime();
 
         if (!level.isClientSide() && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-            // Process dropped item entities with lit sparklers
+            // Server-side: handle dynamic lighting
             for (var entity : serverLevel.getAllEntities()) {
                 if (entity instanceof ItemEntity itemEntity) {
                     var stack = itemEntity.getItem();
@@ -156,6 +163,38 @@ public class RealisticFireworkMod {
                         DynamicLightManager.updateLightForItemEntity(level, itemEntity);
                     }
                 }
+            }
+        } else if (level.isClientSide()) {
+            // Client-side: handle sound for dropped sparklers
+            // Get all entities near the player
+            var player = net.minecraft.client.Minecraft.getInstance().player;
+            if (player != null) {
+                // Search for nearby dropped sparklers
+                var nearbyEntities = level.getEntitiesOfClass(
+                    ItemEntity.class,
+                    player.getBoundingBox().inflate(20.0), // Search within 20 blocks
+                    itemEntity -> {
+                        var stack = itemEntity.getItem();
+                        return stack.getItem() instanceof ItemSparkler && ItemSparkler.isLit(stack);
+                    }
+                );
+
+                for (ItemEntity itemEntity : nearbyEntities) {
+                    var stack = itemEntity.getItem();
+                    SparklerData data = stack.get(ModDataComponents.SPARKLER.get());
+                    if (data != null) {
+                        float burnProgress = data.getBurnProgress(currentTick);
+                        if (burnProgress < SparklerData.MAX_BURN_PROGRESS) {
+                            // Start looping sound for this dropped sparkler
+                            SparklerSoundManager.startSound(itemEntity);
+                        } else {
+                            SparklerSoundManager.stopSound(itemEntity);
+                        }
+                    }
+                }
+
+                // Cleanup stopped sounds
+                SparklerSoundManager.cleanup();
             }
         }
     }

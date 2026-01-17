@@ -1,11 +1,14 @@
 package com.nick.realisticfirework.items;
 
+import com.nick.realisticfirework.RealisticFireworkMod;
+import com.nick.realisticfirework.client.SparklerSoundManager;
 import com.nick.realisticfirework.data.SparklerData;
 import com.nick.realisticfirework.registry.ModDataComponents;
-import net.minecraft.sounds.SoundEvents;
+import com.nick.realisticfirework.registry.ModSounds;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -39,9 +42,10 @@ public class ItemSparkler extends Item {
 
         if (data != null && !data.isLit()) {
             if (!level.isClientSide()) {
-                // Play ignition sound
+                // Play ignition sound (custom sparkler ignite sound)
+                RealisticFireworkMod.LOGGER.info("SPARKLER SOUND: Playing ignite sound!");
                 level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                    SoundEvents.FLINTANDSTEEL_USE, SoundSource.PLAYERS, 1.0F, 1.0F);
+                    ModSounds.SPARKLER_IGNITE.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
 
                 // Get current game tick for burn progress tracking
                 long currentTick = level.getGameTime();
@@ -75,6 +79,28 @@ public class ItemSparkler extends Item {
         }
 
         return InteractionResultHolder.pass(stack);
+    }
+
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+        super.inventoryTick(stack, level, entity, slotId, isSelected);
+
+        // Client-side: manage looping sound for held sparklers
+        if (level.isClientSide() && isLit(stack) && entity instanceof Player) {
+            SparklerData data = stack.get(ModDataComponents.SPARKLER.get());
+            if (data != null) {
+                long currentTick = level.getGameTime();
+                float burnProgress = data.getBurnProgress(currentTick);
+
+                if (burnProgress < SparklerData.MAX_BURN_PROGRESS) {
+                    // Start client-side looping sound (handles its own volume based on distance)
+                    SparklerSoundManager.startSound(entity);
+                } else {
+                    // Burned out, stop sound
+                    SparklerSoundManager.stopSound(entity);
+                }
+            }
+        }
     }
 
     @Override

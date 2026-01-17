@@ -186,8 +186,8 @@ public class SparklerBEWLR extends BlockEntityWithoutLevelRenderer {
             GlowRenderer.renderSparkGlows(poseStack.last(), glowConsumer, displayContext, state, currentInverse, glowFade);
         }
 
-        // Third pass: ATTEMPT 21 - Camera-facing billboard tubes with magenta marker
-        // Each spark is ONE thin quad that faces the camera - creates thin tube appearance
+        // Third pass: Render sparks as camera-facing billboard quads
+        // Each spark is a thin quad that faces the camera - creates bright streaking lines
         if (isLit && !state.realisticSparks.isEmpty()) {
             VertexConsumer sparkConsumer = bufferSource.getBuffer(RenderType.lightning());
             Matrix4f poseMat = new Matrix4f(poseStack.last().pose());
@@ -198,29 +198,20 @@ public class SparklerBEWLR extends BlockEntityWithoutLevelRenderer {
             // Get camera position for billboard calculation
             net.minecraft.world.phys.Vec3 cameraPos = BillboardSparkRenderer.getCameraPosition();
 
-            // MARKER COLOR: Pure magenta (RGB 255, 0, 255)
-            final int MARKER_R = 255;
-            final int MARKER_G = 0;
-            final int MARKER_B = 255;
-
             java.util.List<RealisticSpark> allSparks = RealisticSparkManager.getAllSparks(state.realisticSparks);
             for (RealisticSpark spark : allSparks) {
+                // Get spark color (white-hot to golden yellow transition)
                 float[] color = spark.getColor();
-                float a = color[3];
-                int headAlpha = (int)(a * 255);
-                int tailAlpha = (int)(a * 60); // Fade at tail
 
-                // ULTRA-THIN width - creates thin tube appearance
-                float width = spark.type == RealisticSpark.TYPE_PRIMARY ? 0.0015f : 0.0008f;
+                // Visible width - thick enough to see clearly
+                float width = spark.type == RealisticSpark.TYPE_PRIMARY ? 0.012f : 0.007f;
 
-                // Use BillboardSparkRenderer for proper camera-facing quad
-                // This creates ONE thin quad that always faces the camera = thin tube look
-                BillboardSparkRenderer.renderBillboardSpark(
+                // Render the spark with glow layers for that bright sparkler look
+                BillboardSparkRenderer.renderBillboardSparkWithGlow(
                     sparkConsumer, poseMat, currentInverse, cameraPos,
                     spark.getHeadX(), spark.getHeadY(), spark.getHeadZ(),
                     spark.getTailX(), spark.getTailY(), spark.getTailZ(),
-                    width,
-                    MARKER_R, MARKER_G, MARKER_B, headAlpha, tailAlpha
+                    width, color
                 );
             }
         }

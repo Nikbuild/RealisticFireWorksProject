@@ -1,0 +1,24 @@
+{
+  "sparkler_burning": {
+    "category": "players",
+    "subtitle": "subtitles.realisticfireworkmod.sparkler_burning",
+    "sounds": [
+      {
+        "name": "realisticfireworkmod:sparkler_burning",
+        "stream": false
+      }
+    ]
+  },
+  "sparkler_ignite": {
+    "category": "players",
+    "subtitle": "subtitles.realisticfireworkmod.sparkler_ignite",
+    "sounds": [
+      {
+        "name": "realisticfireworkmod:sparkler_burning",
+        "volume": 1.5,
+        "pitch": 1.2,
+        "stream": false
+      }
+    ]
+  }
+}

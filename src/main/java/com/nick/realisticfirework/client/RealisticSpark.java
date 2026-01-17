@@ -75,13 +75,13 @@ public class RealisticSpark {
         spark.speed = speed;
         spark.initialSpeed = speed;
         spark.age = 0;
-        spark.maxAge = 0.3f + random.nextFloat() * 0.2f;  // 0.3-0.5 seconds
-        spark.explosionAge = spark.maxAge * (0.95f + random.nextFloat() * 0.05f); // Explode at end of life (95-100%)
+        spark.maxAge = 0.25f + random.nextFloat() * 0.35f;  // 0.25-0.6 seconds - more variation
+        spark.explosionAge = spark.maxAge * (0.85f + random.nextFloat() * 0.15f); // Explode at 85-100% of life
         spark.hasExploded = false;
 
         spark.type = TYPE_PRIMARY;
-        spark.thickness = 0.003f + random.nextFloat() * 0.002f;  // Thick primary sparks
-        spark.trailLength = 0.04f + random.nextFloat() * 0.03f;
+        spark.thickness = 0.008f + random.nextFloat() * 0.006f;  // Thicker visible sparks
+        spark.trailLength = 0.08f + random.nextFloat() * 0.12f;  // Much longer trails (0.08-0.20)
         spark.currentTrailLength = spark.trailLength;
         spark.seed = random.nextLong();
 
@@ -113,13 +113,13 @@ public class RealisticSpark {
         spark.speed = speed;
         spark.initialSpeed = speed;
         spark.age = 0;
-        spark.maxAge = 0.15f + random.nextFloat() * 0.15f;  // 0.15-0.3 seconds (shorter than primary)
+        spark.maxAge = 0.12f + random.nextFloat() * 0.18f;  // 0.12-0.3 seconds
         spark.explosionAge = Float.MAX_VALUE;  // Secondaries don't explode
         spark.hasExploded = true;  // Mark as already exploded so it won't spawn children
 
         spark.type = TYPE_SECONDARY;
-        spark.thickness = 0.0015f + random.nextFloat() * 0.001f;  // Thinner secondary sparks
-        spark.trailLength = 0.02f + random.nextFloat() * 0.015f;  // Shorter trail
+        spark.thickness = 0.004f + random.nextFloat() * 0.003f;  // Visible secondary sparks
+        spark.trailLength = 0.04f + random.nextFloat() * 0.06f;  // Longer trails (0.04-0.10)
         spark.currentTrailLength = spark.trailLength;
         spark.seed = random.nextLong();
 
@@ -252,48 +252,56 @@ public class RealisticSpark {
 
     /**
      * Get color based on life progress.
-     * White-hot at birth, fading to yellow then amber at death.
+     * Brilliant white-hot at birth, transitioning to warm golden yellow.
+     * Matches real sparkler appearance from reference image.
      */
     public float[] getColor() {
         float lifeProgress = age / maxAge;
 
         float r, g, b, a;
 
-        if (lifeProgress < 0.3f) {
-            // Pure white-hot
+        if (lifeProgress < 0.15f) {
+            // INTENSE white-hot core - pure white, almost overexposed
             r = 1.0f;
             g = 1.0f;
             b = 1.0f;
-        } else if (lifeProgress < 0.6f) {
-            // White to pale yellow
-            float t = (lifeProgress - 0.3f) / 0.3f;
+        } else if (lifeProgress < 0.35f) {
+            // White to cream - still very bright
+            float t = (lifeProgress - 0.15f) / 0.2f;
             r = 1.0f;
-            g = 1.0f - t * 0.05f;
-            b = 1.0f - t * 0.3f;
-        } else if (lifeProgress < 0.85f) {
-            // Pale yellow to yellow
-            float t = (lifeProgress - 0.6f) / 0.25f;
+            g = 1.0f;
+            b = 1.0f - t * 0.15f;  // Slight warmth
+        } else if (lifeProgress < 0.55f) {
+            // Cream to warm yellow
+            float t = (lifeProgress - 0.35f) / 0.2f;
             r = 1.0f;
-            g = 0.95f - t * 0.1f;
-            b = 0.7f - t * 0.3f;
+            g = 1.0f - t * 0.08f;
+            b = 0.85f - t * 0.35f;
+        } else if (lifeProgress < 0.75f) {
+            // Warm yellow to golden
+            float t = (lifeProgress - 0.55f) / 0.2f;
+            r = 1.0f;
+            g = 0.92f - t * 0.12f;
+            b = 0.5f - t * 0.25f;
         } else {
-            // Yellow to amber (final fade)
-            float t = (lifeProgress - 0.85f) / 0.15f;
-            r = 1.0f;
-            g = 0.85f - t * 0.25f;
-            b = 0.4f - t * 0.3f;
+            // Golden to deep amber (final fade)
+            float t = (lifeProgress - 0.75f) / 0.25f;
+            r = 1.0f - t * 0.1f;
+            g = 0.8f - t * 0.3f;
+            b = 0.25f - t * 0.2f;
         }
 
-        // Alpha: full brightness until late in life, then fade
-        if (lifeProgress < 0.7f) {
+        // Alpha: full brightness until late in life, then rapid fade
+        if (lifeProgress < 0.6f) {
             a = 1.0f;
         } else {
-            a = 1.0f - (lifeProgress - 0.7f) / 0.3f;
+            a = 1.0f - (lifeProgress - 0.6f) / 0.4f;
+            a = a * a;  // Quadratic falloff for more natural fade
         }
 
-        // Secondary sparks are slightly dimmer
+        // Secondary sparks slightly dimmer but still visible
         if (type == TYPE_SECONDARY) {
-            a *= 0.85f;
+            a *= 0.9f;
         }
 
         return new float[]{r, g, b, a};

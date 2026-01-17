@@ -16,11 +16,11 @@ public class RealisticSparkManager {
 
     private static final Random random = new Random();
 
-    // Maximum number of primary sparks active at once
-    public static final int MAX_PRIMARY_SPARKS = 100;
+    // Maximum number of primary sparks active at once - increased for dense spray effect
+    public static final int MAX_PRIMARY_SPARKS = 200;
 
-    // Spawn rate control
-    private static final float SPAWN_INTERVAL = 0.016f;  // ~60 spawns per second base rate
+    // Spawn rate control - faster for more sparks
+    private static final float SPAWN_INTERVAL = 0.008f;  // ~125 spawns per second base rate
     private static float spawnTimer = 0;
 
     /**
@@ -54,35 +54,37 @@ public class RealisticSparkManager {
     }
 
     /**
-     * Spawn a single primary spark shooting into upper hemisphere
+     * Spawn a single primary spark shooting outward in full 360° sphere
+     * Like real sparklers - sparks go in ALL directions, gravity curves them down
      */
     private static void spawnPrimarySpark(List<RealisticSpark> sparks, float burnY,
                                            Matrix4f modelToWorld, float intensity) {
-        // Model space coordinates of burn point
-        float mx = 0.5f + (random.nextFloat() - 0.5f) * 0.01f;
+        // Model space coordinates of burn point with slight randomness
+        float mx = 0.5f + (random.nextFloat() - 0.5f) * 0.012f;
         float my = burnY;
-        float mz = 0.5f + (random.nextFloat() - 0.5f) * 0.01f;
+        float mz = 0.5f + (random.nextFloat() - 0.5f) * 0.012f;
 
-        // Direction: UPPER HEMISPHERE ONLY
-        // Use uniform distribution on hemisphere (not sphere)
-        double theta = random.nextDouble() * Math.PI * 2;  // Full rotation around Y
-        double phi = random.nextDouble() * Math.PI * 0.5;  // 0 to 90 degrees from up (hemisphere)
+        // Direction: FULL SPHERE - sparks go in all directions like real sparklers
+        // Use uniform distribution on sphere
+        double theta = random.nextDouble() * Math.PI * 2;  // Full rotation around Y (0-360°)
+        double phi = Math.acos(2.0 * random.nextDouble() - 1.0);  // Full sphere (0-180°)
 
-        // Add slight bias toward more horizontal angles for better spread
-        // This makes more sparks go outward rather than straight up
-        phi = Math.pow(phi / (Math.PI * 0.5), 0.7) * Math.PI * 0.5;
+        // Bias slightly upward - most sparks go up/out, fewer go straight down
+        // This mimics how you hold a sparkler (pointing up)
+        phi = phi * 0.85 + 0.1;  // Compress range slightly, shift up
+        if (phi > Math.PI) phi = Math.PI;
 
         float sinPhi = (float)Math.sin(phi);
         float cosPhi = (float)Math.cos(phi);
 
         float dirX = (float)(Math.cos(theta) * sinPhi);
-        float dirY = cosPhi;  // Always positive (upper hemisphere)
+        float dirY = cosPhi;  // Can be negative (downward sparks)
         float dirZ = (float)(Math.sin(theta) * sinPhi);
 
-        // Small random perturbation for organic feel
-        dirX += (random.nextFloat() - 0.5f) * 0.1f;
-        dirY += random.nextFloat() * 0.05f;  // Only perturb upward
-        dirZ += (random.nextFloat() - 0.5f) * 0.1f;
+        // Random perturbation for organic chaotic feel
+        dirX += (random.nextFloat() - 0.5f) * 0.15f;
+        dirY += (random.nextFloat() - 0.5f) * 0.1f;
+        dirZ += (random.nextFloat() - 0.5f) * 0.15f;
 
         // Normalize
         float len = (float)Math.sqrt(dirX*dirX + dirY*dirY + dirZ*dirZ);
@@ -90,9 +92,13 @@ public class RealisticSparkManager {
         dirY /= len;
         dirZ /= len;
 
-        // Speed: moderate - these are heated metal particles, not light
-        // They travel short distance before exploding
-        float speed = 0.8f + random.nextFloat() * 0.6f;  // 0.8-1.4 units/second
+        // Speed: HIGH VARIATION - some sparks shoot fast and far, others are slow
+        // This creates the varied trail lengths seen in real sparklers
+        float speedBase = 0.6f + random.nextFloat() * 1.4f;  // 0.6-2.0 units/second
+        // Occasional extra-fast spark
+        if (random.nextFloat() < 0.15f) {
+            speedBase *= 1.5f;  // 15% chance of 50% faster
+        }
 
         // Transform position to world space
         Vector3f worldPos = new Vector3f(mx, my, mz);
@@ -106,7 +112,7 @@ public class RealisticSparkManager {
         RealisticSpark spark = RealisticSpark.createPrimary(
             worldPos.x, worldPos.y, worldPos.z,
             worldDir.x, worldDir.y, worldDir.z,
-            speed
+            speedBase
         );
 
         sparks.add(spark);
